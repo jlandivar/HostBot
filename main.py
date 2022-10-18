@@ -18,6 +18,7 @@ except:
     pass
 
 ready = False
+exError = ""
 
 
 def cargarPagina(headless: bool = True):
@@ -105,17 +106,17 @@ def toRegistrarHoras(window, proyectoId, opcionId, tiempoId, comentario):
     except Exception as e:
         print(str(e))
         window.close()
-        GUI.showMsg(str(e))
+        global exError
+        exError = str(e)
+
+def getHorasRegistradas():
+    filasWE = driver.find_elements(By.XPATH, '/html/body/div[3]/div[3]/div[2]/div[3]/h2/a/table/tbody/tr/td[1]')
+    return [f.text for f in filasWE]
 
 
 def toLogOut():
-    try:
-        driver.find_element(By.ID, "buttonLogout").click()
-        driver.quit()
-        print("aLogOut")
-    except Exception as e:
-        print(type(e))
-        print("TOLOGOUT", str(e))
+    driver.find_element(By.ID, "buttonLogout").click()
+    driver.quit()
 
 
 t1 = threading.Thread(target=cargarPagina, args=(False,))
@@ -127,6 +128,10 @@ proyectos = getListFromWeb('//*[@id="Id_Proyecto"]/option')
 actividades = getListFromWeb('//*[@id="cmbActividades"]/option')[1:]
 tiempos = getListFromWeb('//*[@id="HorasCapturadas"]/option')
 
+# proyectos = []
+# actividades = []
+# tiempos = []
+#
 diasWeb = driver.find_elements(By.XPATH, '//*[@id="calendario"]/div/table/tbody/tr/td')
 diasLab = []
 for d in diasWeb:
@@ -140,4 +145,7 @@ for d in diasWeb:
     except NoSuchElementException:
         pass
 
-GUI.registrarHoras(proyectos, actividades, tiempos, registrarHorasThread, diasLab, toLogOut)
+GUI.registrarHoras(proyectos, actividades, tiempos, registrarHorasThread, diasLab, getHorasRegistradas, toLogOut)
+
+if exError != "":
+    GUI.showMsg(exError)

@@ -1,13 +1,14 @@
 from PyQt5.QtGui import (QPainter, QKeyEvent, QCloseEvent, QMouseEvent)
-from PyQt5.QtCore import (QTimer, QRect, Qt, QDate)
+from PyQt5.QtCore import (QTimer, QRect, QSize, Qt, QDate)
 
 from PyQt5.QtWidgets import (
     QMainWindow, QApplication,
     QLabel, QComboBox, QWidget,
     QFormLayout, QLineEdit,
-    QVBoxLayout, QPushButton,
-    QCalendarWidget, QDialog,
-    QCompleter, QMessageBox
+    QVBoxLayout, QHBoxLayout,
+    QPushButton, QCalendarWidget,
+    QDialog, QCompleter,
+    QMessageBox
 )
 
 import sys
@@ -72,13 +73,14 @@ class LogInWindow(QDialog):
 class Calendar (QCalendarWidget):
     from datetime import datetime
     from typing import Union
-    def __init__(self, diasLab):
+    def __init__(self, diasLab, getHorasRegistradas):
         super().__init__()
         self.diasLab = diasLab
         self.selectedDates = []
         self._shiftPressed = False
         self._fDate = None
         self.clicked.connect(self._on_click)
+        print(getHorasRegistradas())
 
     def paintCell(self, painter: QPainter, rect: QRect, date: Union[QDate, datetime.date]) -> None:
         if date.month() == self.monthShown():
@@ -89,6 +91,15 @@ class Calendar (QCalendarWidget):
                 painter.setPen(Qt.red)
                 painter.drawText(rect, Qt.AlignCenter, str(date.day()))
                 painter.restore()
+            hoursBar = QRect(rect.bottomRight().x() - 5, rect.bottomRight().y() - 3, -6, -16)
+
+            painter.save()
+            painter.pen().setWidth(0)
+            hoursFilled = QRect(rect.bottomRight().x() - 5, rect.bottomRight().y() - 3, -6, -8)
+            painter.restore()
+            painter.fillRect(hoursFilled, Qt.green)
+            painter.drawRect(hoursBar)
+            painter.drawRect(hoursFilled)
         else:
             super().paintCell(painter, rect, date)
 
@@ -134,7 +145,7 @@ class Calendar (QCalendarWidget):
 
 
 class Form (QMainWindow):
-    def __init__(self, proyectos, actividades, tiempos, registrarHorasThread, diasLab, toLogOut, *args, **kwargs):
+    def __init__(self, proyectos, actividades, tiempos, registrarHorasThread, diasLab, getHorasRegistradas, toLogOut, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.setWindowTitle("Host Bot")
@@ -156,7 +167,7 @@ class Form (QMainWindow):
         comLE = QLineEdit()
         form.addRow("Comentario: ", comLE)
 
-        self.calendario = Calendar(diasLab)
+        self.calendario = Calendar(diasLab, getHorasRegistradas)
         self.calendario.setNavigationBarVisible(False)
         self.calendario.setVerticalHeaderFormat(QCalendarWidget.NoVerticalHeader)
         d = QDate.currentDate()
@@ -172,8 +183,13 @@ class Form (QMainWindow):
         self.vbox.addWidget(self.calendario)
         self.vbox.addWidget(self.btn)
 
+        hbox = QHBoxLayout()
+        hbox.addItem(self.vbox)
+        detallesDia = QVBoxLayout()
+
+        hbox.addItem(detallesDia)
         widget = QWidget()
-        widget.setLayout(self.vbox)
+        widget.setLayout(hbox)
         self.setCentralWidget(widget)
 
         self.qTimer = QTimer()
@@ -211,19 +227,17 @@ def logIn(logInThread, isReady):
     app.exec_()
 
 
-def registrarHoras(proyectos, actividades, tiempos, registrarHorasThread, diasLab, toLogOut):
-    window = Form(proyectos, actividades, tiempos, registrarHorasThread, diasLab, toLogOut)
+def registrarHoras(proyectos, actividades, tiempos, registrarHorasThread, diasLab, getHorasRegistradas, toLogOut):
+    window = Form(proyectos, actividades, tiempos, registrarHorasThread, diasLab, getHorasRegistradas, toLogOut)
     window.show()
     app.exec_()
 
 
 def showMsg(errorMsg: str):
-    print("a")
     msg = QMessageBox()
+    msg.setWindowTitle("Error durante llenado")
     msg.setIcon(QMessageBox.Critical)
     msg.setText(errorMsg)
-    print("e")
     msg.show()
-    print("e2")
     app.exec_()
 
