@@ -65,49 +65,60 @@ def isReady():
     return ready
 
 
-def registrarHorasThread(window, proyectoId, opcionId, tiempoId, comentario, dias):
+def registrarHorasThread(window, proyectoId, opcionId, tiempoId, comentario):
     window.btn.setEnabled(False)
-    tReg = threading.Thread(target=toRegistrarHoras, args=(window, proyectoId, opcionId, tiempoId, comentario, dias,))
+    tReg = threading.Thread(target=toRegistrarHoras, args=(window, proyectoId, opcionId, tiempoId, comentario,))
     tReg.start()
 
 
-def toRegistrarHoras(window, proyectoId, opcionId, tiempoId, comentario, dias):
-    window.mensaje = ""
-    webDias = driver.find_elements(By.XPATH, '//*[@id="calendario"]/div/table/tbody/tr/td')
-    for i in range(len(webDias)):
-        d = webDias[i]
-        try:
-            diaTexto = d.find_element(By.TAG_NAME, "a").text
-            if int(diaTexto) in dias:
-                window.btn.setText("Llenando día: " + diaTexto)
-                clickeado = False
-                while not clickeado:
-                    try:
-                        d.click()
-                        webDias = driver.find_elements(By.XPATH, '//*[@id="calendario"]/div/table/tbody/tr/td')
-                        clickeado = True
-                    except:
-                        pass
-                driver.find_element(By.XPATH, '//*[@id="Id_Proyecto"]/option[' + str(proyectoId + 1) + ']').click()
-                driver.find_element(By.XPATH, '//*[@id="cmbActividades"]/option[' + str(opcionId + 2) + ']').click()
-                driver.find_element(By.XPATH, '//*[@id="HorasCapturadas"]/option[' + str(tiempoId + 1) + ']').click()
-                driver.find_element(By.ID, "Comentario").send_keys(comentario)
-                driver.find_element(By.ID, "btnOk").click()
-                webDias = driver.find_elements(By.XPATH, '//*[@id="calendario"]/div/table/tbody/tr/td')
-        except NoSuchElementException:
-            pass
-    window.btn.setText("Ejecutar")
-    window.btn.setEnabled(True)
-    window.mensaje = "¡Ejecutado!"
+def toRegistrarHoras(window, proyectoId, opcionId, tiempoId, comentario):
+    try:
+        dias = [f.day() for f in window.calendario.selectedDates]
+        window.mensaje = ""
+        webDias = driver.find_elements(By.XPATH, '//*[@id="calendario"]/div/table/tbody/tr/td')
+        for i in range(len(webDias)):
+            d = webDias[i]
+            try:
+                diaTexto = d.find_element(By.TAG_NAME, "a").text
+                if int(diaTexto) in dias:
+                    window.btn.setText("Llenando día: " + diaTexto)
+                    clickeado = False
+                    while not clickeado:
+                        try:
+                            d.click()
+                            webDias = driver.find_elements(By.XPATH, '//*[@id="calendario"]/div/table/tbody/tr/td')
+                            clickeado = True
+                        except:
+                            pass
+                    driver.find_element(By.XPATH, '//*[@id="Id_Proyecto"]/option[' + str(proyectoId + 1) + ']').click()
+                    driver.find_element(By.XPATH, '//*[@id="cmbActividades"]/option[' + str(opcionId + 2) + ']').click()
+                    driver.find_element(By.XPATH, '//*[@id="HorasCapturadas"]/option[' + str(tiempoId + 1) + ']').click()
+                    driver.find_element(By.ID, "Comentario").send_keys(comentario)
+                    driver.find_element(By.ID, "btnOk").click()
+                    webDias = driver.find_elements(By.XPATH, '//*[@id="calendario"]/div/table/tbody/tr/td')
+            except NoSuchElementException:
+                pass
+        window.btn.setText("Ejecutar")
+        window.btn.setEnabled(True)
+        window.mensaje = "¡Ejecutado!"
+        window.calendario.selectedDates.clear()
+    except Exception as e:
+        print(str(e))
+        window.close()
+        GUI.showMsg(str(e))
 
 
 def toLogOut():
-    driver.find_element(By.ID, "buttonLogout").click()
-    driver.close()
-    quit()
+    try:
+        driver.find_element(By.ID, "buttonLogout").click()
+        driver.quit()
+        print("aLogOut")
+    except Exception as e:
+        print(type(e))
+        print("TOLOGOUT", str(e))
 
 
-t1 = threading.Thread(target=cargarPagina, args=())
+t1 = threading.Thread(target=cargarPagina, args=(False,))
 t1.start()
 
 GUI.logIn(logInThread, isReady)

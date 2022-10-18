@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import (
     QFormLayout, QLineEdit,
     QVBoxLayout, QPushButton,
     QCalendarWidget, QDialog,
-    QCompleter
+    QCompleter, QMessageBox
 )
 
 import sys
@@ -153,8 +153,8 @@ class Form (QMainWindow):
         tiemposCB.addItems(tiempos)
         form.addRow("Tiempo: ", tiemposCB)
 
-        comET = QLineEdit()
-        form.addRow("Comentario: ", comET)
+        comLE = QLineEdit()
+        form.addRow("Comentario: ", comLE)
 
         self.calendario = Calendar(diasLab)
         self.calendario.setNavigationBarVisible(False)
@@ -165,7 +165,7 @@ class Form (QMainWindow):
         self.btn = QPushButton("Ejecutar")
 
         self.btn.clicked.connect(lambda: registrarHorasThread(self, proyectosCB.currentIndex(), actividadesCB.currentIndex(), tiemposCB.currentIndex(),
-                                                     comET.text(), [f.day() for f in self.calendario.selectedDates]))
+                                                     comLE.text()))
 
         self.vbox = QVBoxLayout()
         self.vbox.addItem(form)
@@ -215,3 +215,15 @@ def registrarHoras(proyectos, actividades, tiempos, registrarHorasThread, diasLa
     window = Form(proyectos, actividades, tiempos, registrarHorasThread, diasLab, toLogOut)
     window.show()
     app.exec_()
+
+
+def showMsg(errorMsg: str):
+    print("a")
+    msg = QMessageBox()
+    msg.setIcon(QMessageBox.Critical)
+    msg.setText(errorMsg)
+    print("e")
+    msg.show()
+    print("e2")
+    app.exec_()
+
