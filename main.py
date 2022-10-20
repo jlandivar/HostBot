@@ -3,7 +3,7 @@ from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 from subprocess import CREATE_NO_WINDOW
 from selenium.webdriver.common.by import By
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException
 import threading
 import GUI
 
@@ -81,37 +81,56 @@ def toRegistrarHoras(window, proyectoId, opcionId, tiempoId, comentario):
             d = webDias[i]
             try:
                 diaTexto = d.find_element(By.TAG_NAME, "a").text
-                if int(diaTexto) in dias:
-                    window.btn.setText("Llenando día: " + diaTexto)
-                    clickeado = False
-                    while not clickeado:
-                        try:
-                            d.click()
-                            webDias = driver.find_elements(By.XPATH, '//*[@id="calendario"]/div/table/tbody/tr/td')
-                            clickeado = True
-                        except:
-                            pass
-                    driver.find_element(By.XPATH, '//*[@id="Id_Proyecto"]/option[' + str(proyectoId + 1) + ']').click()
-                    driver.find_element(By.XPATH, '//*[@id="cmbActividades"]/option[' + str(opcionId + 2) + ']').click()
-                    driver.find_element(By.XPATH, '//*[@id="HorasCapturadas"]/option[' + str(tiempoId + 1) + ']').click()
-                    driver.find_element(By.ID, "Comentario").send_keys(comentario)
-                    driver.find_element(By.ID, "btnOk").click()
-                    webDias = driver.find_elements(By.XPATH, '//*[@id="calendario"]/div/table/tbody/tr/td')
-            except NoSuchElementException:
-                pass
+            except NoSuchElementException as e:
+                print("cuadro sin texto")
+                continue
+
+            if int(diaTexto) in dias:
+                window.btn.setText("Llenando día: " + diaTexto)
+                clickeado = False
+                while not clickeado:
+                    try:
+                        d.click()
+                        clickeado = True
+                    except ElementClickInterceptedException as e:
+                        print(str(e))
+                        pass
+
+                        #try:
+                        #    driver.find_element(By.ID, "btnOk").click()
+                        #except NoSuchElementException:
+                        #    driver.find_element(By.XPATH, '/html/body/div[3]/div[3]/div/button/span')
+                driver.find_element(By.XPATH, '//*[@id="Id_Proyecto"]/option[' + str(proyectoId + 1) + ']').click()
+                driver.find_element(By.XPATH, '//*[@id="cmbActividades"]/option[' + str(opcionId + 2) + ']').click()
+                driver.find_element(By.XPATH, '//*[@id="HorasCapturadas"]/option[' + str(tiempoId + 1) + ']').click()
+                driver.find_element(By.ID, "Comentario").send_keys(comentario)
+                driver.find_element(By.ID, "btnOk").click()
+
+                webDias = driver.find_elements(By.XPATH, '//*[@id="calendario"]/div/table/tbody/tr/td')
+
         window.btn.setText("Ejecutar")
         window.btn.setEnabled(True)
         window.mensaje = "¡Ejecutado!"
         window.calendario.selectedDates.clear()
+        window.calendario.updateCells()
     except Exception as e:
         print(str(e))
         window.close()
         global exError
         exError = str(e)
 
-def getHorasRegistradas():
+def getTiempoPorDia():
     filasWE = driver.find_elements(By.XPATH, '/html/body/div[3]/div[3]/div[2]/div[3]/h2/a/table/tbody/tr/td[1]')
-    return [f.text for f in filasWE]
+    registrosPorDia = [f.text for f in filasWE]
+    tiempoPorDia = {}
+    for reg in registrosPorDia:
+        elementos = reg.split(' ')
+        numDia = int(elementos[1])
+        horas, mins = elementos[-2][1:].split(':')
+        tiempo = (int(horas) + int(mins) / 60)
+        tiempoPorDia[numDia] = tiempo
+
+    return tiempoPorDia
 
 
 def toLogOut():
@@ -135,17 +154,20 @@ tiempos = getListFromWeb('//*[@id="HorasCapturadas"]/option')
 diasWeb = driver.find_elements(By.XPATH, '//*[@id="calendario"]/div/table/tbody/tr/td')
 diasLab = []
 for d in diasWeb:
+    clase = d.get_attribute("class")
     try:
-        clase = d.get_attribute("class")
         child = d.find_element(By.TAG_NAME, "a")
-        childClass = child.get_attribute("class")
-        diaNum = int(child.text)
-        if not ("week-end" in clase or "diaInhabil" in childClass):
-            diasLab.append(diaNum)
     except NoSuchElementException:
-        pass
+        print("cuadro sin Texto (obteniendo dias laborales)")
+        continue
 
-GUI.registrarHoras(proyectos, actividades, tiempos, registrarHorasThread, diasLab, getHorasRegistradas, toLogOut)
+    childClass = child.get_attribute("class")
+    diaNum = int(child.text)
+    if not ("week-end" in clase or "diaInhabil" in childClass):
+        diasLab.append(diaNum)
+
+
+GUI.registrarHoras(proyectos, actividades, tiempos, registrarHorasThread, diasLab, getTiempoPorDia, toLogOut)
 
 if exError != "":
     GUI.showMsg(exError)

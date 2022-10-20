@@ -1,5 +1,6 @@
 from PyQt5.QtGui import (QPainter, QKeyEvent, QCloseEvent, QMouseEvent)
 from PyQt5.QtCore import (QTimer, QRect, QSize, Qt, QDate)
+from time import strptime
 
 from PyQt5.QtWidgets import (
     QMainWindow, QApplication,
@@ -73,14 +74,16 @@ class LogInWindow(QDialog):
 class Calendar (QCalendarWidget):
     from datetime import datetime
     from typing import Union
-    def __init__(self, diasLab, getHorasRegistradas):
+    def __init__(self, diasLab, getTiempoPorDia):
         super().__init__()
         self.diasLab = diasLab
         self.selectedDates = []
         self._shiftPressed = False
         self._fDate = None
         self.clicked.connect(self._on_click)
-        print(getHorasRegistradas())
+        self.getTiempoPorDia = getTiempoPorDia
+
+        self.tiempoPorDia = getTiempoPorDia()
 
     def paintCell(self, painter: QPainter, rect: QRect, date: Union[QDate, datetime.date]) -> None:
         if date.month() == self.monthShown():
@@ -92,14 +95,16 @@ class Calendar (QCalendarWidget):
                 painter.drawText(rect, Qt.AlignCenter, str(date.day()))
                 painter.restore()
             hoursBar = QRect(rect.bottomRight().x() - 5, rect.bottomRight().y() - 3, -6, -16)
-
-            painter.save()
-            painter.pen().setWidth(0)
-            hoursFilled = QRect(rect.bottomRight().x() - 5, rect.bottomRight().y() - 3, -6, -8)
-            painter.restore()
-            painter.fillRect(hoursFilled, Qt.green)
             painter.drawRect(hoursBar)
-            painter.drawRect(hoursFilled)
+            if date.day() in self.tiempoPorDia:
+                painter.save()
+                painter.pen().setWidth(0)
+                pixelesLlenado = int(2 * self.tiempoPorDia[date.day()])
+                hoursFilled = QRect(rect.bottomRight().x() - 5, rect.bottomRight().y() - 3, -6, -pixelesLlenado)
+                painter.restore()
+                painter.fillRect(hoursFilled, Qt.green)
+                painter.drawRect(hoursFilled)
+                painter.restore()
         else:
             super().paintCell(painter, rect, date)
 
@@ -145,7 +150,7 @@ class Calendar (QCalendarWidget):
 
 
 class Form (QMainWindow):
-    def __init__(self, proyectos, actividades, tiempos, registrarHorasThread, diasLab, getHorasRegistradas, toLogOut, *args, **kwargs):
+    def __init__(self, proyectos, actividades, tiempos, registrarHorasThread, diasLab, getTiempoPorDia, toLogOut, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.setWindowTitle("Host Bot")
@@ -167,7 +172,7 @@ class Form (QMainWindow):
         comLE = QLineEdit()
         form.addRow("Comentario: ", comLE)
 
-        self.calendario = Calendar(diasLab, getHorasRegistradas)
+        self.calendario = Calendar(diasLab, getTiempoPorDia)
         self.calendario.setNavigationBarVisible(False)
         self.calendario.setVerticalHeaderFormat(QCalendarWidget.NoVerticalHeader)
         d = QDate.currentDate()
@@ -178,18 +183,21 @@ class Form (QMainWindow):
         self.btn.clicked.connect(lambda: registrarHorasThread(self, proyectosCB.currentIndex(), actividadesCB.currentIndex(), tiemposCB.currentIndex(),
                                                      comLE.text()))
 
-        self.vbox = QVBoxLayout()
-        self.vbox.addItem(form)
-        self.vbox.addWidget(self.calendario)
-        self.vbox.addWidget(self.btn)
+        inVbox = QVBoxLayout()
+        inVbox.addItem(form)
+        inVbox.addWidget(self.calendario)
+        inVbox.addWidget(self.btn)
 
-        hbox = QHBoxLayout()
-        hbox.addItem(self.vbox)
         detallesDia = QVBoxLayout()
-
+        hbox = QHBoxLayout()
+        hbox.addItem(inVbox)
         hbox.addItem(detallesDia)
+        self.vbox = QVBoxLayout()
+        self.vbox.addItem(hbox)
+
+
         widget = QWidget()
-        widget.setLayout(hbox)
+        widget.setLayout(self.vbox)
         self.setCentralWidget(widget)
 
         self.qTimer = QTimer()
@@ -201,7 +209,7 @@ class Form (QMainWindow):
 
     def update(self):
         try:
-            label = self.vbox.itemAt(3).widget()  # Intenta obtener un label existente
+            label = self.vbox.itemAt(1).widget()  # Intenta obtener un label existente
             if self.mensaje == "":
                 self.vbox.removeWidget(label)
                 self.adjustSize()
@@ -227,8 +235,8 @@ def logIn(logInThread, isReady):
     app.exec_()
 
 
-def registrarHoras(proyectos, actividades, tiempos, registrarHorasThread, diasLab, getHorasRegistradas, toLogOut):
-    window = Form(proyectos, actividades, tiempos, registrarHorasThread, diasLab, getHorasRegistradas, toLogOut)
+def registrarHoras(proyectos, actividades, tiempos, registrarHorasThread, diasLab, getTiempoPorDia, toLogOut):
+    window = Form(proyectos, actividades, tiempos, registrarHorasThread, diasLab, getTiempoPorDia, toLogOut)
     window.show()
     app.exec_()
 
