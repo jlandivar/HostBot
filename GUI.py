@@ -152,7 +152,7 @@ class Calendar (QCalendarWidget):
 class Form (QMainWindow):
     def __init__(self, proyectos, actividades, tiempos, registrarHorasThread, diasLab, getTiempoPorDia, toLogOut, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
+        self.error = False
         self.setWindowTitle("Host Bot")
         form = QFormLayout()
 
@@ -222,8 +222,9 @@ class Form (QMainWindow):
                 self.vbox.addWidget(QLabel(self.mensaje))  # Si no lo encuentra, crea uno
 
     def closeEvent(self, a0: QCloseEvent) -> None:
-        self.mensaje = "Cerrando Sesión..."
-        self.toLogOut()
+        if not self.error:
+            self.mensaje = "Cerrando Sesión..."
+            self.toLogOut()
 
 
 app = QApplication(sys.argv)
