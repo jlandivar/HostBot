@@ -76,14 +76,11 @@ def toRegistrarHoras(window, proyectoId, opcionId, tiempoId, comentario):
     try:
         dias = [f.day() for f in window.calendario.selectedDates]
         window.mensaje = ""
-        webDias = driver.find_elements(By.XPATH, '//*[@id="calendario"]/div/table/tbody/tr/td')
+        webDias = driver.find_elements(By.XPATH, '//*[@id="calendario"]/div/table/tbody/tr/td/a')
         for i in range(len(webDias)):
             d = webDias[i]
-            try:
-                diaTexto = d.find_element(By.TAG_NAME, "a").text
-            except NoSuchElementException as e:
-                print("cuadro sin texto")
-                continue
+            diaTexto = d.text
+            print(diaTexto)
 
             if int(diaTexto) in dias:
                 window.btn.setText("Llenando día: " + diaTexto)
@@ -106,7 +103,7 @@ def toRegistrarHoras(window, proyectoId, opcionId, tiempoId, comentario):
                 driver.find_element(By.ID, "Comentario").send_keys(comentario)
                 driver.find_element(By.ID, "btnOk").click()
 
-                webDias = driver.find_elements(By.XPATH, '//*[@id="calendario"]/div/table/tbody/tr/td')
+                webDias = driver.find_elements(By.XPATH, '//*[@id="calendario"]/div/table/tbody/tr/td/a')
 
         window.btn.setText("Ejecutar")
         window.btn.setEnabled(True)
@@ -114,7 +111,8 @@ def toRegistrarHoras(window, proyectoId, opcionId, tiempoId, comentario):
         window.calendario.selectedDates.clear()
         window.calendario.updateCells()
     except Exception as e:
-        print(str(e))
+        print("Tipo:", type(e))
+        print("Error:", str(e))
         window.close()
         global exError
         exError = str(e)
@@ -155,6 +153,7 @@ diasWeb = driver.find_elements(By.XPATH, '//*[@id="calendario"]/div/table/tbody/
 diasLab = []
 for d in diasWeb:
     clase = d.get_attribute("class")
+
     try:
         child = d.find_element(By.TAG_NAME, "a")
     except NoSuchElementException:
