@@ -142,13 +142,6 @@ class Calendar (QCalendarWidget):
             self.selectedDates.append(date)
 
 
-class MyListView (QListView):
-    def painter
-
-
-    def sizeHint(self) -> QtCore.QSize:
-        return
-
 class Form (QMainWindow):
     def __init__(self, proyectos, actividades, tiempos, registrarHorasThread, diasLab, getTiempoPorDia, getActividades, toLogOut, *args, **kwargs):
         super().__init__(*args, **kwargs)
