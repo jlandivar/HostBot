@@ -1,5 +1,5 @@
-from PyQt5.QtGui import (QPainter, QKeyEvent, QCloseEvent, QMouseEvent)
-from PyQt5.QtCore import (QTimer, QRect, QSize, Qt, QDate)
+from PyQt5.QtGui import (QPainter, QKeyEvent, QPixmap)
+from PyQt5.QtCore import (QTimer, QRect, Qt, QDate)
 from time import strptime
 
 from PyQt5.QtWidgets import (
@@ -9,7 +9,7 @@ from PyQt5.QtWidgets import (
     QVBoxLayout, QHBoxLayout,
     QPushButton, QCalendarWidget,
     QDialog, QCompleter,
-    QMessageBox
+    QMessageBox, QListWidget
 )
 
 import sys
@@ -65,10 +65,6 @@ class LogInWindow(QDialog):
                 pass
             else:
                 self.vbox.addWidget(QLabel(self.mensaje))  # Si no lo encuentra, crea uno
-
-    def closeEvent(self, a0: QCloseEvent) -> None:
-        if not self.continuar:
-            quit()
 
 
 class Calendar (QCalendarWidget):
@@ -149,13 +145,13 @@ class Calendar (QCalendarWidget):
             self.selectedDates.append(date)
 
 
+
 class Form (QMainWindow):
     def __init__(self, proyectos, actividades, tiempos, registrarHorasThread, diasLab, getTiempoPorDia, toLogOut, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.error = False
         self.setWindowTitle("Host Bot")
+        self.activityList = QListWidget()
         form = QFormLayout()
-
         proyectosCB = QComboBox()
         proyectosCB.addItems(proyectos)
         form.addRow("Proyecto: ", proyectosCB)
@@ -207,6 +203,13 @@ class Form (QMainWindow):
         self.mensaje = ""
         self.toLogOut = toLogOut
 
+    def updateList(self, webElements):
+        self.activityList.clear()
+        for e in webElements:
+            auxHBox = QHBoxLayout()
+            auxHBox.addItem(QPixmap(e.screenshot_as_png, "png"))
+            self.activityList.addItem()
+
     def update(self):
         try:
             label = self.vbox.itemAt(1).widget()  # Intenta obtener un label existente
@@ -221,10 +224,19 @@ class Form (QMainWindow):
             else:
                 self.vbox.addWidget(QLabel(self.mensaje))  # Si no lo encuentra, crea uno
 
-    def closeEvent(self, a0: QCloseEvent) -> None:
-        if not self.error:
+    def signOutAndClose(self):
+        try:
             self.mensaje = "Cerrando Sesión..."
             self.toLogOut()
+            self.close()
+            return "\nSe logró cerrar sesión después del fallo."
+        except:
+            self.close()
+            return "\nNo se logró cerrar sesión después del fallo."
+
+
+
+
 
 
 app = QApplication(sys.argv)
@@ -244,9 +256,9 @@ def registrarHoras(proyectos, actividades, tiempos, registrarHorasThread, diasLa
 
 def showMsg(errorMsg: str):
     msg = QMessageBox()
-    msg.setWindowTitle("Error durante llenado")
+    msg.setWindowTitle("Error")
     msg.setIcon(QMessageBox.Critical)
     msg.setText(errorMsg)
     msg.show()
-    app.exec_()
+    msg.exec_()
 
