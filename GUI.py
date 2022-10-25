@@ -1,5 +1,5 @@
-from PyQt5.QtGui import (QPainter, QKeyEvent, QPixmap)
-from PyQt5.QtCore import (QTimer, QRect, Qt, QDate)
+from PyQt5.QtGui import (QPainter, QKeyEvent, QStandardItemModel, QStandardItem, QBrush, QImage)
+from PyQt5.QtCore import (QTimer, QRect, Qt, QDate, QSize)
 from time import strptime
 
 from PyQt5.QtWidgets import (
@@ -9,7 +9,7 @@ from PyQt5.QtWidgets import (
     QVBoxLayout, QHBoxLayout,
     QPushButton, QCalendarWidget,
     QDialog, QCompleter,
-    QMessageBox, QListWidget
+    QMessageBox, QListView, QListWidget
 )
 
 import sys
@@ -17,7 +17,6 @@ import sys
 class LogInWindow(QDialog):
     def __init__(self, logInThread, isReady, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
         self.setWindowTitle("Host Bot")
         form = QFormLayout()
 
@@ -39,7 +38,7 @@ class LogInWindow(QDialog):
         self.setLayout(self.vbox)
 
         self.qTimer = QTimer()
-        self.qTimer.setInterval(250)
+        self.qTimer.setInterval(200)
         self.qTimer.timeout.connect(self.update)
         self.qTimer.start()
         self.isReady = isReady
@@ -135,8 +134,6 @@ class Calendar (QCalendarWidget):
 
         self.updateCells()
 
-
-
     def _changeDateState(self, date):
         if date in self.selectedDates:
             i = self.selectedDates.index(date)
@@ -145,12 +142,18 @@ class Calendar (QCalendarWidget):
             self.selectedDates.append(date)
 
 
+class MyListView (QListView):
+    def painter
+
+
+    def sizeHint(self) -> QtCore.QSize:
+        return
 
 class Form (QMainWindow):
-    def __init__(self, proyectos, actividades, tiempos, registrarHorasThread, diasLab, getTiempoPorDia, toLogOut, *args, **kwargs):
+    def __init__(self, proyectos, actividades, tiempos, registrarHorasThread, diasLab, getTiempoPorDia, getActividades, toLogOut, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setWindowTitle("Host Bot")
-        self.activityList = QListWidget()
+
         form = QFormLayout()
         proyectosCB = QComboBox()
         proyectosCB.addItems(proyectos)
@@ -184,33 +187,45 @@ class Form (QMainWindow):
         inVbox.addWidget(self.calendario)
         inVbox.addWidget(self.btn)
 
-        detallesDia = QVBoxLayout()
         hbox = QHBoxLayout()
         hbox.addItem(inVbox)
-        hbox.addItem(detallesDia)
+        activityView = QListView()
+        self.activityModel = QStandardItemModel()
+        activityView.setModel(self.activityModel)
+        hbox.addWidget(activityView)
         self.vbox = QVBoxLayout()
         self.vbox.addItem(hbox)
-
 
         widget = QWidget()
         widget.setLayout(self.vbox)
         self.setCentralWidget(widget)
 
         self.qTimer = QTimer()
-        self.qTimer.setInterval(250)
+        self.qTimer.setInterval(200)
         self.qTimer.timeout.connect(self.update)
         self.qTimer.start()
         self.mensaje = ""
         self.toLogOut = toLogOut
+        self.calendario.selectionChanged.connect(lambda: self.updateList(
+                                                            getActividades(
+                                                                self.calendario.selectedDate().day())))
 
     def updateList(self, webElements):
-        self.activityList.clear()
-        for e in webElements:
-            auxHBox = QHBoxLayout()
-            auxHBox.addItem(QPixmap(e.screenshot_as_png, "png"))
-            self.activityList.addItem()
+        self.activityModel.clear()
+        f = open("linea.txt")
+        codigo = f.read()
+        try:
+            for e in webElements:
+                item = QStandardItem()
+                exec(codigo)
+                item.setCheckable(True)
+                self.activityModel.appendRow(item)
+        except Exception as e:
+            print(str(e))
 
+        f.close()
     def update(self):
+
         try:
             label = self.vbox.itemAt(1).widget()  # Intenta obtener un label existente
             if self.mensaje == "":
@@ -248,8 +263,8 @@ def logIn(logInThread, isReady):
     app.exec_()
 
 
-def registrarHoras(proyectos, actividades, tiempos, registrarHorasThread, diasLab, getTiempoPorDia, toLogOut):
-    window = Form(proyectos, actividades, tiempos, registrarHorasThread, diasLab, getTiempoPorDia, toLogOut)
+def registrarHoras(proyectos, actividades, tiempos, registrarHorasThread, diasLab, getTiempoPorDia, getActividades, toLogOut):
+    window = Form(proyectos, actividades, tiempos, registrarHorasThread, diasLab, getTiempoPorDia, getActividades, toLogOut)
     window.show()
     app.exec_()
 

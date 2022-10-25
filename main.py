@@ -35,7 +35,7 @@ def cargarPagina(headless: bool = True):
     global driver
     driver = webdriver.Chrome(service=chrome_service, options=options)
     driver.get("https://host.globalhitss.com/")
-    driver.find_element(By.ID, "pestana2")
+    driver.find_element(By.ID, "pestana2").click()
     ready = True
 
 
@@ -52,6 +52,7 @@ def logInThread(window, user, pwd):
 
 def toLogIn(window,):
     try:
+        window.setDisabled(True)
         window.mensaje = ""
         driver.find_element(By.ID, "UserName").send_keys(usuario)
         driver.find_element(By.ID, "Password").send_keys(contrasenia)
@@ -74,12 +75,19 @@ def toLogIn(window,):
         global unknownError
         unknownError = str(e)
         window.close()
-        #driver.quit()
+        driver.quit()
+        window.setDisabled(False)
 
 
 def isReady():
     return ready
 
+def getActividades(diaTexto):
+    diaTexto = str(diaTexto) #En caso de que se pase un entero
+    if int(diaTexto) < 10:
+        diaTexto = '0' + diaTexto
+    xpathAct = '//*[@id="diaActividadesAcordion_' + diaTexto + '"]/table/tbody/tr'
+    return driver.find_elements(By.XPATH, xpathAct)
 
 def registrarHorasThread(window, proyectoId, opcionId, tiempoId, comentario):
     window.btn.setEnabled(False)
@@ -96,16 +104,12 @@ def toRegistrarHoras(window, proyectoId, opcionId, tiempoId, comentario):
         while i in range(len(webDias)):
             d = webDias[i]
             diaTexto = d.text
-            if int(diaTexto) < 10:
-                diaTexto = '0' + diaTexto
 
             if int(diaTexto) in dias:
                 print(diaTexto)
-                xpathAct = '/html/body/div[3]/div[3]/div[3]/div[6]/div/table/tbody/tr'
-
                 window.btn.setText("Llenando día: " + diaTexto)
                 d.click()
-                nAntes = len(driver.find_elements(By.XPATH, xpathAct))
+                nAntes = len(getActividades(diaTexto))
                 driver.find_element(By.XPATH, '//*[@id="Id_Proyecto"]/option[' + str(proyectoId + 1) + ']').click()
                 driver.find_element(By.XPATH, '//*[@id="cmbActividades"]/option[' + str(opcionId + 2) + ']').click()
                 driver.find_element(By.XPATH, '//*[@id="HorasCapturadas"]/option[' + str(tiempoId + 1) + ']').click()
@@ -137,7 +141,7 @@ def toRegistrarHoras(window, proyectoId, opcionId, tiempoId, comentario):
                     i -= 1
                 else:
                     print("else")
-                    nDespues = len(driver.find_elements(By.XPATH, xpathAct))
+                    nDespues = len(getActividades(diaTexto))
                     print("antes", nAntes)
                     print("despues", nDespues)
                     if nAntes == nDespues:
@@ -160,6 +164,7 @@ def toRegistrarHoras(window, proyectoId, opcionId, tiempoId, comentario):
         unknownError = str(e)
         unknownError += window.signOutAndClose()
         driver.quit()
+
 
 def getTiempoPorDia():
     filasWE = driver.find_elements(By.XPATH, '/html/body/div[3]/div[3]/div[2]/div[3]/h2/a/table/tbody/tr/td[1]')
@@ -206,7 +211,7 @@ if unknownError == "":
             diasLab.append(diaNum)
 
     #driver.set_network_conditions(offline=False, latency=3000, download_throughput=8000, upload_throughput=8000)
-    GUI.registrarHoras(proyectos, actividades, tiempos, registrarHorasThread, diasLab, getTiempoPorDia, toLogOut)
+    GUI.registrarHoras(proyectos, actividades, tiempos, registrarHorasThread, diasLab, getTiempoPorDia, getActividades, toLogOut)
 
 if unknownError != "":
     GUI.showMsg(unknownError)
