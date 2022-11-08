@@ -1,0 +1,4 @@
+
+print("actividad =", actividad)
+print("horas =", horas)
+print("comentario =", comentario)

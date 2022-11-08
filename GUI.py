@@ -1,5 +1,5 @@
 from PyQt5.QtGui import (QPainter, QKeyEvent, QStandardItemModel, QStandardItem, QBrush, QImage)
-from PyQt5.QtCore import (QTimer, QRect, Qt, QDate, QSize)
+from PyQt5.QtCore import (QTimer, QRect, Qt, QDate, QModelIndex)
 from time import strptime
 
 from PyQt5.QtWidgets import (
@@ -9,7 +9,7 @@ from PyQt5.QtWidgets import (
     QVBoxLayout, QHBoxLayout,
     QPushButton, QCalendarWidget,
     QDialog, QCompleter,
-    QMessageBox, QListView, QListWidget
+    QMessageBox, QTableView
 )
 
 import sys
@@ -136,14 +136,16 @@ class Calendar (QCalendarWidget):
 
     def _changeDateState(self, date):
         if date in self.selectedDates:
-            i = self.selectedDates.index(date)
-            self.selectedDates.pop(i)
+            self.selectedDates.remove(date)
         else:
             self.selectedDates.append(date)
 
+    def dayNumberToDate(self, day: int):
+        cDate = QDate.currentDate()
+        return QDate(cDate.year(), cDate.month(), day)
 
 class Form (QMainWindow):
-    def __init__(self, proyectos, actividades, tiempos, registrarHorasThread, diasLab, getTiempoPorDia, getActividades, toLogOut, *args, **kwargs):
+    def __init__(self, proyectos, actividades, tiempos, registrarHorasThread, diasLab, getTiempoPorDia, getRegistrosDia, deleteRegs, toLogOut, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setWindowTitle("Host Bot")
 
@@ -182,10 +184,21 @@ class Form (QMainWindow):
 
         hbox = QHBoxLayout()
         hbox.addItem(inVbox)
-        activityView = QListView()
-        self.activityModel = QStandardItemModel()
-        activityView.setModel(self.activityModel)
-        hbox.addWidget(activityView)
+
+        activityModel = QStandardItemModel(0, 3)
+        activityModel.setHeaderData(0, Qt.Horizontal, "Actividad")
+        activityModel.setHeaderData(1, Qt.Horizontal, "Horas")
+        activityModel.setHeaderData(2, Qt.Horizontal, "Comentario")
+        self.activityView = QTableView()
+        self.activityView.setModel(activityModel)
+
+        deleteBtn = QPushButton("Eliminar")
+        deleteBtn.clicked.connect(lambda: deleteRegs(self.getSelectedRegs()))
+        inVbox2 = QVBoxLayout()
+        inVbox2.addWidget(self.activityView)
+        inVbox2.addWidget(deleteBtn)
+
+        hbox.addItem(inVbox2)
         self.vbox = QVBoxLayout()
         self.vbox.addItem(hbox)
 
@@ -200,25 +213,34 @@ class Form (QMainWindow):
         self.mensaje = ""
         self.toLogOut = toLogOut
         self.calendario.selectionChanged.connect(lambda: self.updateList(
-                                                            getActividades(
+                                                            getRegistrosDia(
                                                                 self.calendario.selectedDate().day())))
 
-    def updateList(self, webElements):
-        self.activityModel.clear()
-        f = open("linea.txt")
-        codigo = f.read()
+    def getSelectedRegs(self):
+        activityModel = self.activityView.model()
+        selectedItems = []
+        for i in range(activityModel.rowCount()):
+            itemData = activityModel.itemData(activityModel.index(i, 0))
+            selected = itemData[10] == 2
+            if selected:
+                selectedItems.append(i)
+        dia = self.calendario.selectedDate().day()
+        return dia, selectedItems
+
+    def updateList(self, registrosDia):
+        activityModel = self.activityView.model()
+        activityModel.removeRows(0, activityModel.rowCount())
         try:
-            for e in webElements:
-                item = QStandardItem()
-                exec(codigo)
-                item.setCheckable(True)
-                self.activityModel.appendRow(item)
+            for reg in registrosDia:
+                actItem = QStandardItem(reg[0])
+                row = [actItem, QStandardItem(reg[1]), QStandardItem(reg[2])]
+                actItem.setCheckable(True)
+                activityModel.appendRow(row)
+            self.activityView.resizeColumnsToContents()
         except Exception as e:
             print(str(e))
 
-        f.close()
     def update(self):
-
         try:
             label = self.vbox.itemAt(1).widget()  # Intenta obtener un label existente
             if self.mensaje == "":
@@ -256,9 +278,12 @@ def logIn(logInThread, isReady):
     app.exec_()
 
 
-def registrarHoras(proyectos, actividades, tiempos, registrarHorasThread, diasLab, getTiempoPorDia, getActividades, toLogOut):
-    window = Form(proyectos, actividades, tiempos, registrarHorasThread, diasLab, getTiempoPorDia, getActividades, toLogOut)
+def registrarHoras(proyectos, actividades, tiempos, registrarHorasThread, diasLab, getTiempoPorDia, getRegistrosDia, deleteRegs, toLogOut):
+    print("a1")
+    window = Form(proyectos, actividades, tiempos, registrarHorasThread, diasLab, getTiempoPorDia, getRegistrosDia, deleteRegs, toLogOut)
+    print("a2")
     window.show()
+    print("a3")
     app.exec_()
 
 
