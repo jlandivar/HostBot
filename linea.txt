@@ -1,4 +1,10 @@
+driver.find_element(By.ID, "btnLista_calendario").click()
+elementoPadre = driver.find_element(By.ID, "listaActividades")
+listaDeElementos = elementoPadre.find_elements(By.XPATH, "div")
+tabla = driver.find_element(By.ID, "diaActividadesAcordion_" + dia)
+i = listaDeElementos.index(tabla)
+elementoPadre.find_elements(By.XPATH, "h2")[i].click()
 
-print("actividad =", actividad)
-print("horas =", horas)
-print("comentario =", comentario)
+tabla.find_elements(By.XPATH, "table/tbody/tr")[1:]
+for i in range(len(tabla):
+

@@ -189,10 +189,18 @@ def deleteRegs(parDia_Registros: tuple):
     if int(dia) < 10:
         dia = '0' + dia
 
-    driver.find_elements(By.XPATH, "//*[@id="diaActividadesAcordion_08"]/table/tbody/tr[2]")
-    for i in range(len(registrosDelDia)):
-        if i in regNumbers:
-            registrosDelDia[i].f>ind_element(By.XPATH, "td[3]").click()
+    f = open("linea.txt")
+    try:
+        exec(f.read())
+    except Exception as e:
+        print(e)
+    f.close()
+
+
+    # driver.find_elements(By.XPATH, "//*[@id="diaActividadesAcordion_08"]/table/tbody/tr[2]")
+    # for i in range(len(registrosDelDia)):
+    #     if i in regNumbers:
+    #         registrosDelDia[i].f>ind_element(By.XPATH, "td[3]").click()
 
 
 
