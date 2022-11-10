@@ -3,7 +3,7 @@ from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 from subprocess import CREATE_NO_WINDOW
 from selenium.webdriver.common.by import By
-from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException, StaleElementReferenceException
+from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException, StaleElementReferenceException, ElementNotInteractableException
 import threading
 import GUI
 from time import sleep
@@ -86,13 +86,13 @@ def getRegistrosDia(dia):
     dia = str(dia)  # En caso de que se pase un entero
     if int(dia) < 10:
         dia = '0' + dia
-    try:
-        infoDelDia = driver.find_element(By.ID, "diaActividadesAcordion_" + dia)
-    except NoSuchElementException:
+    posiblesPaths = driver.find_elements(By.ID, "diaActividadesAcordion_" + dia)
+    if len(posiblesPaths) == 0:
         return []
 
+    infoDelDia = posiblesPaths[-1]
     registrosDelDia = infoDelDia.find_elements(By.XPATH, 'table/tbody/tr')[1:]
-
+    print("registrosDelDia len =", len(registrosDelDia))
     listaRegistros = []
     for reg in registrosDelDia:
         actividad = reg.find_element(By.XPATH, "td/table/tbody/tr/td").get_attribute("textContent")
@@ -111,8 +111,10 @@ def registrarHorasThread(window, proyectoId, opcionId, tiempoId, comentario):
 def toRegistrarHoras(window, proyectoId, opcionId, tiempoId, comentario):
     try:
         dias = [f.day() for f in window.calendario.selectedDates]
+        print("dias =", dias)
         window.mensaje = ""
         webDias = driver.find_elements(By.XPATH, '//*[@id="calendario"]/div/table/tbody/tr/td/a')
+        print(len(webDias))
         i = 0
         while i in range(len(webDias)):
             d = webDias[i]
@@ -120,7 +122,6 @@ def toRegistrarHoras(window, proyectoId, opcionId, tiempoId, comentario):
             diaNum = int(diaTexto)
 
             if diaNum in dias:
-                print(diaTexto)
                 window.btn.setText("Llenando día: " + diaTexto)
                 d.click()
                 nAntes = len(getRegistrosDia(diaTexto))
@@ -169,7 +170,6 @@ def toRegistrarHoras(window, proyectoId, opcionId, tiempoId, comentario):
                         window.calendario.updateCell(date)
 
                 webDias = driver.find_elements(By.XPATH, '//*[@id="calendario"]/div/table/tbody/tr/td/a')
-
             i += 1
 
         window.btn.setText("Ejecutar")
@@ -183,25 +183,19 @@ def toRegistrarHoras(window, proyectoId, opcionId, tiempoId, comentario):
         unknownError += window.signOutAndClose()
         driver.quit()
 
-def deleteRegs(parDia_Registros: tuple):
-    dia, regNumbers = parDia_Registros
+def deleteRegs(window):
+    dia, regNumbers = window.getSelectedRegs()
     dia = str(dia)
     if int(dia) < 10:
         dia = '0' + dia
 
     f = open("linea.txt")
     try:
+
         exec(f.read())
     except Exception as e:
         print(e)
     f.close()
-
-
-    # driver.find_elements(By.XPATH, "//*[@id="diaActividadesAcordion_08"]/table/tbody/tr[2]")
-    # for i in range(len(registrosDelDia)):
-    #     if i in regNumbers:
-    #         registrosDelDia[i].f>ind_element(By.XPATH, "td[3]").click()
-
 
 
 def getTiempoPorDia():
@@ -250,7 +244,10 @@ if unknownError == "":
 
     print("a")
     #driver.set_network_conditions(offline=False, latency=3000, download_throughput=8000, upload_throughput=8000)
-    GUI.registrarHoras(proyectos, actividades, tiempos, registrarHorasThread, diasLab, getTiempoPorDia, getRegistrosDia, deleteRegs, toLogOut)
+    try:
+        GUI.registrarHoras(proyectos, actividades, tiempos, registrarHorasThread, diasLab, getTiempoPorDia, getRegistrosDia, deleteRegs, toLogOut)
+    except Exception as e:
+        GUI.showMsg(e)
 
 if unknownError != "":
     GUI.showMsg(unknownError)

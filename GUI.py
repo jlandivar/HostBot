@@ -193,7 +193,7 @@ class Form (QMainWindow):
         self.activityView.setModel(activityModel)
 
         deleteBtn = QPushButton("Eliminar")
-        deleteBtn.clicked.connect(lambda: deleteRegs(self.getSelectedRegs()))
+        deleteBtn.clicked.connect(lambda: deleteRegs(self))
         inVbox2 = QVBoxLayout()
         inVbox2.addWidget(self.activityView)
         inVbox2.addWidget(deleteBtn)
