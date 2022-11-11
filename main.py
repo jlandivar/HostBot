@@ -3,7 +3,7 @@ from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 from subprocess import CREATE_NO_WINDOW
 from selenium.webdriver.common.by import By
-from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException, StaleElementReferenceException, ElementNotInteractableException
+from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException, StaleElementReferenceException, ElementNotInteractableException, WebDriverException
 import threading
 import GUI
 from time import sleep
@@ -27,14 +27,15 @@ def cargarPagina(headless: bool = True):
     global ready
     options = webdriver.ChromeOptions()
     chrome_service = Service(ChromeDriverManager().install())
-    chrome_service.creationflags = CREATE_NO_WINDOW
 
     if headless:
+        chrome_service.creationflags = CREATE_NO_WINDOW
         options.add_argument('headless')
 
     global driver
     driver = webdriver.Chrome(service=chrome_service, options=options)
     driver.get("https://host.globalhitss.com/")
+
     driver.find_element(By.ID, "pestana2").click()
     ready = True
 
@@ -62,9 +63,13 @@ def toLogIn(window,):
             window.continuar = True
             window.close()
         else:
-            window.mensaje = driver.find_element(By.XPATH, '//*[@id="messageDialog"]/div/ul/li').text
-            driver.find_element(By.XPATH, "/html/body/div[3]/div[1]/button").click()
-            driver.find_element(By.ID, "UserName").clear()
+            try:
+                window.mensaje = driver.find_element(By.XPATH, '//*[@id="messageDialog"]/div/ul/li').text
+                driver.find_element(By.XPATH, "/html/body/div[3]/div[1]/button").click()
+                driver.find_element(By.ID, "UserName").clear()
+            except NoSuchElementException:
+                driver.find_element(By.ID, "reload-button").click()
+                window.mensaje = "Revise su conexión..."
 
         window.btn.setText("Iniciar Sesión")
         window.btn.setEnabled(True)
@@ -103,7 +108,7 @@ def getRegistrosDia(dia):
     return listaRegistros
 
 def registrarHorasThread(window, proyectoId, opcionId, tiempoId, comentario):
-    window.btn.setEnabled(False)
+    window.setDisabled(True)
     tReg = threading.Thread(target=toRegistrarHoras, args=(window, proyectoId, opcionId, tiempoId, comentario,))
     tReg.start()
 
@@ -117,6 +122,7 @@ def toRegistrarHoras(window, proyectoId, opcionId, tiempoId, comentario):
         print(len(webDias))
         i = 0
         while i in range(len(webDias)):
+            print("primerWhile")
             d = webDias[i]
             diaTexto = d.text
             diaNum = int(diaTexto)
@@ -133,6 +139,7 @@ def toRegistrarHoras(window, proyectoId, opcionId, tiempoId, comentario):
 
                 cargado = False
                 while not cargado:
+                    print("segundoWhile")
                     try:
                         driver.find_elements(By.XPATH, '//*[@id="calendario"]/div/table/tbody/tr/td/a')[i].click()
                         cargado = True
@@ -172,8 +179,11 @@ def toRegistrarHoras(window, proyectoId, opcionId, tiempoId, comentario):
                 webDias = driver.find_elements(By.XPATH, '//*[@id="calendario"]/div/table/tbody/tr/td/a')
             i += 1
 
+        print("a")
+        window.updateList(getRegistrosDia(window.calendario.selectedDate().day()))
+        print("despues de a")
         window.btn.setText("Ejecutar")
-        window.btn.setEnabled(True)
+        window.setDisabled(False)
         window.mensaje = "¡Ejecutado!"
     except Exception as e:
         print("Tipo:", type(e))
@@ -184,18 +194,79 @@ def toRegistrarHoras(window, proyectoId, opcionId, tiempoId, comentario):
         driver.quit()
 
 def deleteRegs(window):
+    window.setDisabled(True)
+    tDel = threading.Thread(target=toDeleteRegs, args=(window, ))
+    tDel.start()
+
+def toDeleteRegs(window):
     dia, regNumbers = window.getSelectedRegs()
     dia = str(dia)
     if int(dia) < 10:
         dia = '0' + dia
 
-    f = open("linea.txt")
-    try:
+    driver.execute_script("window.scrollTo(0, 0)")
+    driver.find_element(By.ID, "btnLista_calendario").click()
 
-        exec(f.read())
-    except Exception as e:
-        print(e)
-    f.close()
+    elementoPadre = driver.find_element(By.ID, "listaActividades")
+    listaDeElementos = elementoPadre.find_elements(By.XPATH, "div")
+
+    tabla = driver.find_element(By.ID, "diaActividadesAcordion_" + dia)
+    iDia = listaDeElementos.index(tabla)
+    dropDownBtn = elementoPadre.find_elements(By.XPATH, "h2")[iDia]
+    dropDownBtn.click()
+    botones = tabla.find_elements(By.XPATH, "table/tbody/tr/td[3]/button")
+
+    eliminados = 0
+
+    for i in regNumbers:
+        cargandoX = True
+        while cargandoX:
+            try:
+                botones[i - eliminados].click()
+                print("click")
+                cargandoX = False
+            except ElementNotInteractableException:
+                print("noX")
+
+        cargandoSi = True
+        while cargandoSi:
+            try:
+                print("antes de buscar el boton si")
+                driver.find_element(By.XPATH, "/html/body/div/div/div/button/span").click()
+                print("click si hecho")
+                cargandoSi = False
+            except ElementNotInteractableException:
+                print("noSiBtn")
+
+        cargandoBorrado = True
+        while cargandoBorrado:
+            try:
+                driver.execute_script("window.scrollTo(0, 0)")
+                driver.find_element(By.ID, "menuButtonOpen").click()
+                driver.find_element(By.ID, "menuButtonOpen").click()
+                cargandoBorrado = False
+            except ElementClickInterceptedException:
+                continue
+
+        try:
+            listaDeElementos = elementoPadre.find_elements(By.XPATH, "div")
+            tabla = driver.find_element(By.ID, "diaActividadesAcordion_" + dia)
+            iDia = listaDeElementos.index(tabla)
+            dropDownBtn = elementoPadre.find_elements(By.XPATH, "h2")[iDia]
+            horas, mins = dropDownBtn.find_element(By.XPATH, "a/table/tbody/tr/td").text.split(" ")[5][1:].split(':')
+            tiempo = (int(horas) + int(mins) / 60)
+            botones = tabla.find_elements(By.XPATH, "table/tbody/tr/td[3]/button")
+        except NoSuchElementException:
+            tiempo = 0
+
+        print("tiempo =", tiempo)
+        window.calendario.tiempoPorDia[int(dia)] = tiempo
+        date = window.calendario.dayNumberToDate(int(dia))
+        window.calendario.updateCell(date)
+        window.activityView.model().removeRow(i - eliminados)
+        eliminados += 1
+
+    window.setDisabled(False)
 
 
 def getTiempoPorDia():
@@ -216,10 +287,13 @@ def toLogOut():
     driver.find_element(By.ID, "buttonLogout").click()
 
 
-t1 = threading.Thread(target=cargarPagina, args=(False,))
+t1 = threading.Thread(target=lambda: cargarPagina(headless=True))
 t1.start()
 
-GUI.logIn(logInThread, isReady)
+try:
+    GUI.logIn(logInThread, isReady)
+except Exception as e:
+    unknownError += str(e)
 
 if unknownError == "":
     proyectos = getListFromWeb('//*[@id="Id_Proyecto"]/option')

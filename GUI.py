@@ -1,4 +1,4 @@
-from PyQt5.QtGui import (QPainter, QKeyEvent, QStandardItemModel, QStandardItem, QBrush, QImage)
+from PyQt5.QtGui import (QPainter, QKeyEvent, QStandardItemModel, QStandardItem, QIcon)
 from PyQt5.QtCore import (QTimer, QRect, Qt, QDate, QModelIndex)
 from time import strptime
 
@@ -18,6 +18,7 @@ class LogInWindow(QDialog):
     def __init__(self, logInThread, isReady, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setWindowTitle("Host Bot")
+        self.setWindowIcon(QIcon('logo.ico'))
         form = QFormLayout()
 
         userTE = QLineEdit()
@@ -147,6 +148,7 @@ class Calendar (QCalendarWidget):
 class Form (QMainWindow):
     def __init__(self, proyectos, actividades, tiempos, registrarHorasThread, diasLab, getTiempoPorDia, getRegistrosDia, deleteRegs, toLogOut, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.setWindowIcon(QIcon('logo.ico'))
         self.setWindowTitle("Host Bot")
 
         form = QFormLayout()
@@ -230,15 +232,14 @@ class Form (QMainWindow):
     def updateList(self, registrosDia):
         activityModel = self.activityView.model()
         activityModel.removeRows(0, activityModel.rowCount())
-        try:
-            for reg in registrosDia:
-                actItem = QStandardItem(reg[0])
-                row = [actItem, QStandardItem(reg[1]), QStandardItem(reg[2])]
-                actItem.setCheckable(True)
-                activityModel.appendRow(row)
-            self.activityView.resizeColumnsToContents()
-        except Exception as e:
-            print(str(e))
+        for reg in registrosDia:
+            actItem = QStandardItem(reg[0])
+            row = [actItem, QStandardItem(reg[1]), QStandardItem(reg[2])]
+            actItem.setCheckable(True)
+            activityModel.appendRow(row)
+
+        self.activityView.resizeColumnsToContents()
+
 
     def update(self):
         try:
