@@ -344,7 +344,7 @@ def toLogOut():
     driver.find_element(By.ID, "buttonLogout").click()
 
 
-t1 = threading.Thread(target=lambda: cargarPagina(headless=False))
+t1 = threading.Thread(target=lambda: cargarPagina(headless=True))
 t1.start()
 
 try:
