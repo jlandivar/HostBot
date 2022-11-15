@@ -146,7 +146,7 @@ class Calendar (QCalendarWidget):
         return QDate(cDate.year(), cDate.month(), day)
 
 class Form (QMainWindow):
-    def __init__(self, proyectos, actividades, tiempos, registrarHorasThread, diasLab, getTiempoPorDia, getRegistrosDia, deleteRegs, toLogOut, *args, **kwargs):
+    def __init__(self, proyectos, actividades, tiempos, registrarHorasThread, diasLab, getTiempoPorDia, getRegistrosDia, vaciarHorasThread, deleteRegs, toLogOut, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setWindowIcon(QIcon('logo.ico'))
         self.setWindowTitle("Host Bot")
@@ -174,15 +174,20 @@ class Form (QMainWindow):
         d = QDate.currentDate()
         self.calendario.setDateRange(QDate(d.year(), d.month(), 1), QDate(d.year(), d.month(), d.daysInMonth()))
 
-        self.btn = QPushButton("Ejecutar")
+        self.btnEjecutar = QPushButton("Ejecutar")
+        self.btnVaciar = QPushButton("Vaciar")
 
-        self.btn.clicked.connect(lambda: registrarHorasThread(self, proyectosCB.currentIndex(), actividadesCB.currentIndex(), tiemposCB.currentIndex(),
-                                                     comLE.text()))
+        self.btnEjecutar.clicked.connect(lambda: registrarHorasThread(self, proyectosCB.currentIndex(), actividadesCB.currentIndex(), tiemposCB.currentIndex(),
+                                                                      comLE.text()))
+        self.btnVaciar.clicked.connect(lambda: vaciarHorasThread(self))
 
         inVbox = QVBoxLayout()
         inVbox.addItem(form)
         inVbox.addWidget(self.calendario)
-        inVbox.addWidget(self.btn)
+        btnSet = QHBoxLayout()
+        btnSet.addWidget(self.btnEjecutar)
+        btnSet.addWidget(self.btnVaciar)
+        inVbox.addItem(btnSet)
 
         hbox = QHBoxLayout()
         hbox.addItem(inVbox)
@@ -279,12 +284,9 @@ def logIn(logInThread, isReady):
     app.exec_()
 
 
-def registrarHoras(proyectos, actividades, tiempos, registrarHorasThread, diasLab, getTiempoPorDia, getRegistrosDia, deleteRegs, toLogOut):
-    print("a1")
-    window = Form(proyectos, actividades, tiempos, registrarHorasThread, diasLab, getTiempoPorDia, getRegistrosDia, deleteRegs, toLogOut)
-    print("a2")
+def registrarHoras(proyectos, actividades, tiempos, registrarHorasThread, diasLab, getTiempoPorDia, getRegistrosDia, vaciarHorasThread, deleteRegs, toLogOut):
+    window = Form(proyectos, actividades, tiempos, registrarHorasThread, diasLab, getTiempoPorDia, getRegistrosDia, vaciarHorasThread, deleteRegs, toLogOut)
     window.show()
-    print("a3")
     app.exec_()
 
 

@@ -97,7 +97,6 @@ def getRegistrosDia(dia):
 
     infoDelDia = posiblesPaths[-1]
     registrosDelDia = infoDelDia.find_elements(By.XPATH, 'table/tbody/tr')[1:]
-    print("registrosDelDia len =", len(registrosDelDia))
     listaRegistros = []
     for reg in registrosDelDia:
         actividad = reg.find_element(By.XPATH, "td/table/tbody/tr/td").get_attribute("textContent")
@@ -116,22 +115,27 @@ def registrarHorasThread(window, proyectoId, opcionId, tiempoId, comentario):
 def toRegistrarHoras(window, proyectoId, opcionId, tiempoId, comentario):
     try:
         dias = [f.day() for f in window.calendario.selectedDates]
-        print("dias =", dias)
         window.mensaje = ""
         webDias = driver.find_elements(By.XPATH, '//*[@id="calendario"]/div/table/tbody/tr/td/a')
         print(len(webDias))
         i = 0
         while i in range(len(webDias)):
-            print("primerWhile")
-            d = webDias[i]
-            diaTexto = d.text
+            diaTexto = driver.find_elements(By.XPATH, '//*[@id="calendario"]/div/table/tbody/tr/td/a')[i].text
             diaNum = int(diaTexto)
 
             if diaNum in dias:
-                window.btn.setText("Llenando día: " + diaTexto)
-                d.click()
-                nAntes = len(getRegistrosDia(diaTexto))
+                window.btnEjecutar.setText("Llenando día: " + diaTexto)
                 driver.find_element(By.XPATH, '//*[@id="Id_Proyecto"]/option[' + str(proyectoId + 1) + ']').click()
+                proyectoCargado = False
+                while not proyectoCargado:
+                    try:
+                        driver.find_elements(By.XPATH, '//*[@id="calendario"]/div/table/tbody/tr/td/a')[i].click()
+                        proyectoCargado = True
+                    except ElementClickInterceptedException:
+                        pass
+                    except StaleElementReferenceException:
+                        pass
+                nAntes = len(getRegistrosDia(diaTexto))
                 driver.find_element(By.XPATH, '//*[@id="cmbActividades"]/option[' + str(opcionId + 2) + ']').click()
                 driver.find_element(By.XPATH, '//*[@id="HorasCapturadas"]/option[' + str(tiempoId + 1) + ']').click()
                 driver.find_element(By.ID, "Comentario").send_keys(comentario)
@@ -139,14 +143,12 @@ def toRegistrarHoras(window, proyectoId, opcionId, tiempoId, comentario):
 
                 cargado = False
                 while not cargado:
-                    print("segundoWhile")
                     try:
                         driver.find_elements(By.XPATH, '//*[@id="calendario"]/div/table/tbody/tr/td/a')[i].click()
                         cargado = True
                     except ElementClickInterceptedException:
-                        print("cargando para validar")
+                        pass
                     except StaleElementReferenceException:
-                        print("La pagina cargó después de obtener el botón pero justo después de hacer click")
                         cargado = True
 
                 if driver.current_url == "https://host.globalhitss.com/Security/Login?timeout=true":
@@ -159,7 +161,6 @@ def toRegistrarHoras(window, proyectoId, opcionId, tiempoId, comentario):
                     driver.find_element(By.ID, "boton").click()
                     window.setDisabled(False)
                     window.mensaje = "Sesión iniciada. Continuando con ejecución..."
-                    print("afterEnabling")
                     i -= 1
                 else:
                     nDespues = len(getRegistrosDia(diaTexto))
@@ -179,10 +180,8 @@ def toRegistrarHoras(window, proyectoId, opcionId, tiempoId, comentario):
                 webDias = driver.find_elements(By.XPATH, '//*[@id="calendario"]/div/table/tbody/tr/td/a')
             i += 1
 
-        print("a")
         window.updateList(getRegistrosDia(window.calendario.selectedDate().day()))
-        print("despues de a")
-        window.btn.setText("Ejecutar")
+        window.btnEjecutar.setText("Ejecutar")
         window.setDisabled(False)
         window.mensaje = "¡Ejecutado!"
     except Exception as e:
@@ -192,6 +191,73 @@ def toRegistrarHoras(window, proyectoId, opcionId, tiempoId, comentario):
         unknownError = str(e)
         unknownError += window.signOutAndClose()
         driver.quit()
+
+def vaciarHorasThread(window):
+    window.setDisabled(True)
+    tVaciar = threading.Thread(target=toVaciarHoras, args=(window,))
+    tVaciar.start()
+
+def toVaciarHoras(window):
+    try:
+        dias = [f.day() for f in window.calendario.selectedDates]
+        window.mensaje = ""
+        webDias = driver.find_elements(By.XPATH, '//*[@id="calendario"]/div/table/tbody/tr/td/a')
+        print(len(webDias))
+        i = 0
+        while i in range(len(webDias)):
+            d = driver.find_elements(By.XPATH, '//*[@id="calendario"]/div/table/tbody/tr/td/a')[i]
+            diaTexto = d.text
+            diaNum = int(diaTexto)
+
+            if diaNum in dias:
+                d.click()
+                window.btnVaciar.setText("Vaciando día: " + diaTexto)
+                try:
+                    driver.find_element(By.ID, "btnBorraDiaCaptura").click()
+                except NoSuchElementException:
+                    print("no hay actividades en el dia")
+                    continue
+
+                cargandoSi = True
+                while cargandoSi:
+                    try:
+                        driver.find_element(By.XPATH, "/html/body/div/div/div/button/span").click()
+                        cargandoSi = False
+                    except ElementNotInteractableException:
+                        print("noSiBtn")
+
+                cargandoBorrado = True
+                while cargandoBorrado:
+                    try:
+                        driver.execute_script("window.scrollTo(0, 0)")
+                        driver.find_element(By.ID, "menuButtonOpen").click()
+                        driver.find_element(By.ID, "menuButtonOpen").click()
+                        cargandoBorrado = False
+                    except ElementClickInterceptedException:
+                        continue
+
+                date = window.calendario.dayNumberToDate(diaNum)
+                horas, mins = driver.find_element(By.ID, "lblTotalDiaHeader").text.split(" ")[0].split(':')
+                tiempo = (int(horas) + int(mins) / 60)
+                window.calendario.tiempoPorDia[diaNum] = tiempo
+                window.calendario.selectedDates.remove(date)
+                window.calendario.updateCell(date)
+
+                webDias = driver.find_elements(By.XPATH, '//*[@id="calendario"]/div/table/tbody/tr/td/a')
+            i += 1
+
+        window.updateList(getRegistrosDia(window.calendario.selectedDate().day()))
+        window.btnVaciar.setText("Vaciar")
+        window.setDisabled(False)
+        window.mensaje = "¡Vaciado!"
+    except Exception as e:
+        print("Tipo:", type(e))
+        print("Error:", str(e))
+        global unknownError
+        unknownError = str(e)
+        unknownError += window.signOutAndClose()
+        driver.quit()
+
 
 def deleteRegs(window):
     window.setDisabled(True)
@@ -223,20 +289,11 @@ def toDeleteRegs(window):
         while cargandoX:
             try:
                 botones[i - eliminados].click()
-                print("click")
                 cargandoX = False
             except ElementNotInteractableException:
                 print("noX")
 
-        cargandoSi = True
-        while cargandoSi:
-            try:
-                print("antes de buscar el boton si")
-                driver.find_element(By.XPATH, "/html/body/div/div/div/button/span").click()
-                print("click si hecho")
-                cargandoSi = False
-            except ElementNotInteractableException:
-                print("noSiBtn")
+
 
         cargandoBorrado = True
         while cargandoBorrado:
@@ -287,7 +344,7 @@ def toLogOut():
     driver.find_element(By.ID, "buttonLogout").click()
 
 
-t1 = threading.Thread(target=lambda: cargarPagina(headless=True))
+t1 = threading.Thread(target=lambda: cargarPagina(headless=False))
 t1.start()
 
 try:
@@ -296,6 +353,7 @@ except Exception as e:
     unknownError += str(e)
 
 if unknownError == "":
+    #sleep(60)
     proyectos = getListFromWeb('//*[@id="Id_Proyecto"]/option')
     actividades = getListFromWeb('//*[@id="cmbActividades"]/option')[1:]
     tiempos = getListFromWeb('//*[@id="HorasCapturadas"]/option')
@@ -316,12 +374,11 @@ if unknownError == "":
         if not ("week-end" in clase or "diaInhabil" in childClass):
             diasLab.append(diaNum)
 
-    print("a")
     #driver.set_network_conditions(offline=False, latency=3000, download_throughput=8000, upload_throughput=8000)
     try:
-        GUI.registrarHoras(proyectos, actividades, tiempos, registrarHorasThread, diasLab, getTiempoPorDia, getRegistrosDia, deleteRegs, toLogOut)
+        GUI.registrarHoras(proyectos, actividades, tiempos, registrarHorasThread, diasLab, getTiempoPorDia, getRegistrosDia, vaciarHorasThread, deleteRegs, toLogOut)
     except Exception as e:
-        GUI.showMsg(e)
+        GUI.showMsg(str(e))
 
 if unknownError != "":
     GUI.showMsg(unknownError)
