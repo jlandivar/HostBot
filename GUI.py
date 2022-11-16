@@ -1,5 +1,5 @@
 from PyQt5.QtGui import (QPainter, QKeyEvent, QStandardItemModel, QStandardItem, QIcon)
-from PyQt5.QtCore import (QTimer, QRect, Qt, QDate, QModelIndex)
+from PyQt5.QtCore import (QTimer, QRect, Qt, QDate, QSize)
 from time import strptime
 
 from PyQt5.QtWidgets import (
@@ -197,6 +197,7 @@ class Form (QMainWindow):
         activityModel.setHeaderData(1, Qt.Horizontal, "Horas")
         activityModel.setHeaderData(2, Qt.Horizontal, "Comentario")
         self.activityView = QTableView()
+        self.activityView.setVerticalHeader(None)
         self.activityView.setModel(activityModel)
 
         deleteBtn = QPushButton("Eliminar")
@@ -244,6 +245,19 @@ class Form (QMainWindow):
             activityModel.appendRow(row)
 
         self.activityView.resizeColumnsToContents()
+        fixed = int(open("linea.txt").read())
+        col0 = self.activityView.sizeHintForColumn(0)
+        col2 = self.activityView.sizeHintForColumn(2)
+        if col0 == 1:
+            col0 = 85
+        if col2 == 7:
+            col2 = 99
+        variable = col0 + col2
+        print("col0 =", col0)
+        print("col2 =", col2)
+        print(variable)
+        print("window =", self.size().width())
+        self.resize(QSize(fixed + variable, self.size().height()))
 
 
     def update(self):

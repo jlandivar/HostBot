@@ -67,6 +67,7 @@ def toLogIn(window,):
                 window.mensaje = driver.find_element(By.XPATH, '//*[@id="messageDialog"]/div/ul/li').text
                 driver.find_element(By.XPATH, "/html/body/div[3]/div[1]/button").click()
                 driver.find_element(By.ID, "UserName").clear()
+                window.setDisabled(False)
             except NoSuchElementException:
                 driver.find_element(By.ID, "reload-button").click()
                 window.mensaje = "Revise su conexión..."
@@ -211,11 +212,14 @@ def toVaciarHoras(window):
 
             if diaNum in dias:
                 d.click()
+                date = window.calendario.dayNumberToDate(diaNum)
                 window.btnVaciar.setText("Vaciando día: " + diaTexto)
                 try:
                     driver.find_element(By.ID, "btnBorraDiaCaptura").click()
                 except NoSuchElementException:
                     print("no hay actividades en el dia")
+                    window.calendario.selectedDates.remove(date)
+                    i += 1
                     continue
 
                 cargandoSi = True
@@ -236,7 +240,7 @@ def toVaciarHoras(window):
                     except ElementClickInterceptedException:
                         continue
 
-                date = window.calendario.dayNumberToDate(diaNum)
+
                 horas, mins = driver.find_element(By.ID, "lblTotalDiaHeader").text.split(" ")[0].split(':')
                 tiempo = (int(horas) + int(mins) / 60)
                 window.calendario.tiempoPorDia[diaNum] = tiempo
@@ -344,7 +348,7 @@ def toLogOut():
     driver.find_element(By.ID, "buttonLogout").click()
 
 
-t1 = threading.Thread(target=lambda: cargarPagina(headless=True))
+t1 = threading.Thread(target=lambda: cargarPagina(headless=False))
 t1.start()
 
 try:
